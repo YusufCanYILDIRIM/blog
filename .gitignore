@@ -1,0 +1,41 @@
+# dependencies
+node_modules/
+
+# build
+dist/
+build/
+.next/
+
+# env
+.env
+.env.local
+.env.production
+
+# logs
+logs/
+*.log
+npm-debug.log*
+
+# prisma
+backend/prisma/dev.db
+
+# vscode
+.vscode/
+
+# mac
+.DS_Store
+
+# windows
+Thumbs.db
+
+# coverage
+coverage/
+
+# turbo
+.turbo/
+
+# cache
+.cache/
+
+# docker
+docker-data/
