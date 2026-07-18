@@ -1,0 +1,46 @@
+# dependencies
+node_modules/
+
+# build
+dist/
+build/
+.next/
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.production
+
+# logs
+logs/
+*.log
+npm-debug.log*
+
+# prisma
+prisma/dev.db
+prisma/generated/
+
+# vscode
+.vscode/
+
+# claude code local settings
+.claude/
+
+# mac
+.DS_Store
+
+# windows
+Thumbs.db
+
+# coverage
+coverage/
+
+# turbo
+.turbo/
+
+# cache
+.cache/
+
+# docker
+docker-data/
