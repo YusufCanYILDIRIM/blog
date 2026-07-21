@@ -2,17 +2,24 @@
 
 | Dosya/Klasör | Amaç | Durum |
 |---|---|---|
-| `schema.prisma` | Datasource (PostgreSQL) + client generator tanımı | Hazır, model yok |
-| `migrations/` | `prisma migrate dev` ile üretilecek migration geçmişi | İlk model eklendiğinde oluşur |
-| `seed.ts` | Geliştirme ortamı için idempotent (`upsert` bazlı) veri üretimi | Modeller eklendiğinde yazılacak |
+| `schema.prisma` | Datasource (PostgreSQL) + client generator + modeller | Hazır — `User`, `Post`, `Comment`, `Category`, `Tag`, `PostTag` (Sprint 2.2) |
+| `migrations/` | `prisma migrate dev` ile üretilen migration geçmişi | `20260721082519_init_blog_schema` uygulandı |
+| `seed.ts` | Geliştirme ortamı için idempotent (`upsert` bazlı) veri üretimi | Henüz yazılmadı |
 
-## Neden model yok?
+## Model özeti (Sprint 2.2)
 
-Bu sprint yalnızca proje iskeletini kurar (bkz. Sprint 2.1 kapsamı). Veritabanı modelleme
-(`Post`, `User`, `Comment`, ...), ilişkiler, index ve migration üretimi; şema tasarımının
-netleşeceği ayrı bir sprintte yapılacaktır.
+- **User** → Post (1-N), Comment (1-N). `email` unique, `role` (`USER`/`ADMIN`).
+- **Post** → Comment (1-N), Category (N-1), Tag (N-N via `PostTag`). `slug` unique.
+- **Comment** → User (N-1), Post (N-1).
+- **Category** → Post (1-N). `name`/`slug` unique.
+- **Tag** ↔ Post (N-N via `PostTag`). `name`/`slug` unique.
+- **PostTag** — Post↔Tag için açık (explicit) join modeli; `(postId, tagId)` üzerinde unique kısıt.
 
-## Kullanım (modeller eklendikten sonra)
+Tüm modellerde UUID (`@db.Uuid`) primary key, `createdAt`/`updatedAt` audit alanları var; **soft
+delete kullanılmıyor** (proje kararı — silme işlemleri kalıcı). Her ilişkide `onDelete` açıkça
+belirtildi (bkz. `schema.prisma` yorumları).
+
+## Kullanım
 
 ```bash
 npm run prisma:generate   # @prisma/client'ı schema'dan üretir
