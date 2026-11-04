@@ -43,3 +43,49 @@ npm run prisma:studio     # Prisma Studio
   veri korunacak şekilde düzenlenir (örnek: `20261104120000_portfolio_auth_foundation`).
 - Veri içeren bir veritabanında `migrate reset` veya `db push` kullanılmaz.
 - Migration dosyaları LF satır sonuyla tutulur (`.gitattributes`); Prisma checksum'ı buna bağlıdır.
+- Prisma 7, PostgreSQL'de her migration'ı tek transaction içinde uygular: hata veren bir
+  migration kısmi şema değişikliği bırakmaz (doğrulandı, bkz. aşağıdaki kurtarma bölümü).
+- `migrate deploy`, daha yeni bir migration'ı uygulanmış bir veritabanına sonradan eklenen eski
+  damgalı bir migration'ı da uygular. Bu yüzden araya eklenen migration'lar, şema zaten ileri
+  gitmişse hiçbir şey yapmayacak şekilde koşullu yazılır.
+
+## `users.bio` → `profiles.bio` geçişi ve kurtarma
+
+Biyografi `users` tablosundan `profiles` tablosuna taşındı. Geçiş üç migration'dan oluşur:
+
+| Migration | Ne yapar |
+|---|---|
+| `20261104115000_stash_user_bios` | Dolu `users.bio` değerlerini `legacy_user_bios` tablosuna kopyalar, `users.bio`'yu boşaltır. `users.bio` sütunu yoksa hiçbir şey yapmaz |
+| `20261104120000_portfolio_auth_foundation` | Yeni şema. En baştaki koruma, `users.bio` hâlâ doluysa hiçbir şeyi değiştirmeden durur |
+| `20261104130000_restore_user_bios` | Her biyografiyi aynı kullanıcının profiline yazar (profil yoksa `kisi-<userId>` slug'ıyla oluşturur; dolu bir profil biyografisini ezmez), sonra `legacy_user_bios`'u siler |
+
+Normal durumda `npm run prisma:deploy` üçünü sırayla uygular; elle işlem gerekmez. Adımlar
+tekrar çalıştırmaya dayanıklıdır: yarıda kesilen bir deploy aynı komutla sürdürülür, mükerrer
+profil oluşmaz.
+
+### Koruma devreye girmiş bir veritabanı
+
+`115000` eklenmeden önceki sürümle deploy yapılmış ve biyografi doluysa:
+
+```
+Error: P3018 ... Migration name: 20261104120000_portfolio_auth_foundation
+ERROR: users.bio dolu kayıt içeriyor; önce profiles tablosuna taşıyın.
+```
+
+Bu mesajdaki "profiles tablosuna taşıyın" talimatı **uygulanamaz**, çünkü `profiles` tablosu o
+migration içinde oluşturulur. Tabloyu elle oluşturmak migration'ı `relation "profiles" already
+exists` hatasıyla yeniden bozar. Bunun yerine şunları yapın:
+
+1. Veritabanının yedeğini alın.
+2. `DATABASE_URL` hedef veritabanını gösterecek şekilde çalıştırın:
+   ```bash
+   npm run prisma:recover-bio-guard
+   ```
+   Script yalnızca o migration için tek bir başarısız kayıt varsa **ve** şema hiç değişmemişse
+   (`users.bio` ve `posts.published` duruyor; `post_status`, `profiles`, `sessions` yok)
+   `prisma migrate resolve --rolled-back` çalıştırır. Aksi halde hiçbir şeyi değiştirmeden
+   nedenini yazar ve sıfır olmayan kodla çıkar. Veriye dokunmaz.
+3. `npm run prisma:deploy` komutunu çalıştırın. Biyografiler profillere taşınır.
+
+Bu akış `tests/integration/bio-migration-recovery.test.ts` ile gerçek PostgreSQL ve gerçek
+Prisma CLI üzerinde test edilir.

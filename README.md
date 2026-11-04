@@ -75,6 +75,7 @@ Redis varsayılan olarak başlatılmaz; ihtiyaç olursa `docker compose --profil
 | `npm run test:integration` | Gerçek PostgreSQL'e karşı testler. `TEST_DATABASE_URL` gerekir; veritabanı adı `_test` ile bitmeli, testler tabloları temizler |
 | `npm run prisma:migrate` | Yeni migration üretir (yalnızca geliştirme DB'si) |
 | `npm run prisma:deploy` | Commit edilmiş migration'ları uygular |
+| `npm run prisma:recover-bio-guard` | `users.bio` korumasında durmuş bir veritabanını, koşullar doğrulanırsa kurtarır ([ayrıntı](prisma/README.md#usersbio--profilesbio-geçişi-ve-kurtarma)) |
 
 ## Git akışı
 

@@ -833,6 +833,8 @@ enum ProjectStatus {
 - CI, test, staging ve production'a `prisma migrate deploy` ile uygulanır, asla `prisma db push` ile değil. Veri içeren bir veritabanında `prisma migrate reset` çalıştırılmaz.
 - Migration dosyaları LF satır sonuyla tutulur (`.gitattributes`); Prisma uygulanmış migration'ları checksum ile doğrular.
 - Yıkıcı migration'lar (kolon silme, tip daraltma) önce **backward-compatible** bir ara adımdan geçirilir (expand-contract pattern): yeni kolon eklenir → veri taşınır → eski kolon bir sonraki release'de silinir.
+- Bir koruma bloğu migration'ı durduruyorsa, durma mesajındaki talimat **o migration uygulanmadan önce yerine getirilebilir** olmalıdır (ör. henüz oluşturulmamış bir tabloya taşıma istenmez). Veri, korumadan önce çalışan ayrı bir migration ile güvenli bir ara tabloya alınır ve sonraki bir migration ile hedefe yazılır. Araya eklenen migration'lar, şema zaten ileri gitmişse hiçbir şey yapmayacak şekilde koşullu yazılır; çünkü `migrate deploy` eski damgalı migration'ları da sonradan uygular.
+- Başarısız bir migration için `prisma migrate resolve` koşulsuz çalıştırılmaz; önce başarısız kaydın ve şemanın beklenen durumda olduğu doğrulanır. Örnek: `npm run prisma:recover-bio-guard` (bkz. [prisma/README.md](../prisma/README.md#usersbio--profilesbio-geçişi-ve-kurtarma)).
 
 ### 8.3. Relations
 
