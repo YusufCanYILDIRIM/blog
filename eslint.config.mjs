@@ -1,11 +1,10 @@
-import { FlatCompat } from "@eslint/eslintrc";
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
 
-const compat = new FlatCompat({
-  baseDirectory: import.meta.dirname,
-});
-
-const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
   {
     rules: {
       "@typescript-eslint/no-explicit-any": "error",
@@ -15,9 +14,15 @@ const eslintConfig = [
       "react-hooks/rules-of-hooks": "error",
     },
   },
-  {
-    ignores: [".next/**", "node_modules/**", "prisma/generated/**"],
-  },
-];
+  globalIgnores([
+    ".next/**",
+    "out/**",
+    "build/**",
+    "coverage/**",
+    "node_modules/**",
+    "prisma/generated/**",
+    "next-env.d.ts",
+  ]),
+]);
 
 export default eslintConfig;

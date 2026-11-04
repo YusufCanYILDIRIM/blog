@@ -4,12 +4,15 @@
 // Soft delete kullanılmıyor (proje kararı) — silme işlemleri kalıcıdır (hard delete).
 
 generator client {
-  provider = "prisma-client-js"
+  provider     = "prisma-client"
+  output       = "./generated"
+  moduleFormat = "esm"
 }
 
+// Bağlantı adresi Prisma 7 ile `prisma.config.ts` içinden okunur; çalışma
+// zamanında `lib/prisma.ts` içindeki `@prisma/adapter-pg` sürücüsü kullanılır.
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum UserRole {
