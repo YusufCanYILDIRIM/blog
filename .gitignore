@@ -5,6 +5,7 @@ node_modules/
 dist/
 build/
 .next/
+*.tsbuildinfo
 
 # env
 .env
@@ -17,10 +18,14 @@ logs/
 npm-debug.log*
 
 # prisma
-backend/prisma/dev.db
+prisma/dev.db
+prisma/generated/
 
 # vscode
 .vscode/
+
+# claude code local settings
+.claude/
 
 # mac
 .DS_Store

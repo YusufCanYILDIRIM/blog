@@ -1,0 +1,6 @@
+node_modules
+.next
+prisma/generated
+coverage
+*.md
+package-lock.json
