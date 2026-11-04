@@ -1,8 +1,10 @@
 # Proje Geliştirme Kuralları (Project Rules)
 
-> **Versiyon:** 1.0.0
+> **Versiyon:** 1.1.0
 > **Durum:** Bağlayıcı (Binding) — Bu belge, projede üretilecek tüm kodlar için referans standarttır.
-> **Kapsam:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS v4, shadcn/ui, Prisma ORM, PostgreSQL, Auth.js v5, Zod, React Hook Form, TanStack Table, Lucide Icons
+> **Kapsam:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, shadcn/ui (base-nova, `@base-ui/react`), Prisma ORM 7, PostgreSQL, Better Auth, Zod, React Hook Form, Vitest, Lucide Icons
+>
+> **1.1.0 değişiklikleri (Aşama 1):** Next.js 16 / Prisma 7; Auth.js yerine Better Auth ([ADR 0001](adr/0001-auth-better-auth.md)); soft delete yerine hesap pasifleştirme ve `Restrict` ilişkileri (§8.7); `develop` tabanlı Git akışı (§14.1); kök `hooks/` ve `utils/` kaldırıldı (§2); test aracı Vitest (§15). Kod örneklerindeki `Project` modeli genel bir örnektir.
 
 ---
 
@@ -37,10 +39,10 @@ Application (Use Cases / Services)
         ↓ bağımlı olur
 Domain (Entities, Business Rules)
         ↑ Infrastructure buna bağımlıdır, tersi değil
-Infrastructure (Prisma, Auth.js, external APIs)
+Infrastructure (Prisma, Better Auth, external APIs)
 ```
 
-**Neden?** Prisma'dan başka bir ORM'e geçilmesi gerektiğinde, ya da Auth.js yerine başka bir auth çözümü kullanılacağında, domain ve application katmanlarının hiç dokunulmadan kalması gerekir. Bu ayrım olmadan, framework migration'ları tüm codebase'i yeniden yazmak anlamına gelir.
+**Neden?** Prisma'dan başka bir ORM'e geçilmesi gerektiğinde, ya da Better Auth yerine başka bir auth çözümü kullanılacağında, domain ve application katmanlarının hiç dokunulmadan kalması gerekir. Bu ayrım olmadan, framework migration'ları tüm codebase'i yeniden yazmak anlamına gelir.
 
 **Doğru:**
 
@@ -115,7 +117,7 @@ React'ta class inheritance zaten yok, ama "composition over inheritance" ilkesi 
 
 ### 1.7. Server First Yaklaşımı
 
-Next.js 15 App Router'ın gücü sunucu tarafında yatar. Varsayılan davranış **Server Component**'tir; bir component yalnızca gerçek bir istemci ihtiyacı (etkileşim, tarayıcı API'si, state) olduğunda `"use client"` alır.
+Next.js App Router'ın gücü sunucu tarafında yatar. Varsayılan davranış **Server Component**'tir; bir component yalnızca gerçek bir istemci ihtiyacı (etkileşim, tarayıcı API'si, state) olduğunda `"use client"` alır.
 
 **Neden?** Server-first yaklaşım; daha küçük JS bundle, daha hızlı ilk yükleme (TTFB/FCP), doğrudan veritabanı erişimi (API katmanı olmadan) ve daha güvenli veri işleme (secrets client'a sızmaz) sağlar. Detaylar için bkz. Bölüm 5 ve 6.
 
@@ -162,7 +164,7 @@ project-root/
 │
 ├── shared/                     # Birden fazla feature tarafından paylaşılan, iş mantığı İÇERMEYEN kod
 │   ├── components/              # Genel amaçlı UI (Button wrapper'ları, EmptyState, PageHeader...)
-│   ├── hooks/                   # useDebounce, useMediaQuery gibi domain'den bağımsız hook'lar
+│   ├── hooks/                   # useDebounce, useMediaQuery gibi paylaşılan hook'lar (shadcn hooks alias'ı)
 │   ├── utils/                    # formatCurrency, slugify gibi saf fonksiyonlar
 │   └── constants/                # Paylaşılan sabitler
 │
@@ -170,10 +172,10 @@ project-root/
 │   └── ui/                      # shadcn/ui tarafından üretilen, DOKUNULMAMASI gereken primitive'ler
 │
 ├── lib/                         # Altyapısal singleton'lar ve üçüncü parti entegrasyon konfigürasyonları
-│   ├── prisma.ts                # PrismaClient singleton
-│   ├── auth.ts                  # Auth.js konfigürasyonu
-│   ├── env.ts                   # Zod ile doğrulanmış environment değişkenleri
-│   └── logger.ts                # Merkezi logger instance'ı
+│   ├── prisma.ts                # PrismaClient singleton (server-only)
+│   ├── auth.ts                  # Better Auth konfigürasyonu (Aşama 3)
+│   ├── env.ts                   # Doğrulanmış sunucu env değişkenleri (server-only)
+│   └── env.schema.ts            # Env şemaları ve saf doğrulama fonksiyonları
 │
 ├── prisma/
 │   ├── schema.prisma
@@ -184,7 +186,8 @@ project-root/
 │   ├── api.types.ts              # Ortak API response tipleri
 │   └── global.d.ts
 │
-├── hooks/                       # Proje geneli (feature-agnostic) global hook'lar (shared/hooks ile örtüşürse shared'a taşınır)
+├── config/                      # site.ts ve public-env.ts (yalnızca NEXT_PUBLIC_* değerleri)
+├── tests/integration/           # Gerçek PostgreSQL'e karşı entegrasyon testleri
 │
 └── docs/
     └── project-rules.md          # Bu belge
@@ -492,7 +495,7 @@ State yönetimi katmanlı bir strateji izler; her zaman **en düşük seviyeli, 
 | Tek component içi geçici UI state | `useState` |
 | Birden fazla component'in paylaştığı, aynı sayfa ağacı içi state | Prop drilling (2-3 seviye) veya `useContext` |
 | URL'de yaşaması gereken state (filtre, sayfa, arama) | `useSearchParams` / `nuqs` benzeri URL state |
-| Global client state (auth session, tema) | React Context (minimal), Auth.js `useSession` |
+| Global client state (auth session, tema) | React Context (minimal), Better Auth istemcisinin `useSession` hook'u |
 
 **ZORUNLU:** Sunucudan gelen veri için ayrı bir client-side global state kütüphanesi (Redux, Zustand vb.) **varsayılan olarak kullanılmaz**. Next.js App Router mimarisinde sunucu verisi zaten Server Component + cache ile yönetilir; ek bir state kütüphanesi yalnızca gerçek, karmaşık client-only state (örn. çok adımlı wizard, canvas editör) için gerekçelendirilerek eklenir.
 
@@ -616,7 +619,7 @@ export async function createProjectAction(formData: FormData) {
 
 ### 6.3. Caching
 
-Next.js 15'in varsayılan fetch caching davranışı değişmiştir (`fetch` artık varsayılan olarak cache'lenmez); bu nedenle cache stratejisi **açıkça** belirtilir:
+Next.js 15'ten itibaren varsayılan fetch caching davranışı değişmiştir (`fetch` artık varsayılan olarak cache'lenmez); bu nedenle cache stratejisi **açıkça** belirtilir:
 
 ```typescript
 // Statik, nadiren değişen veri
@@ -809,7 +812,6 @@ model Project {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  deletedAt   DateTime?
 
   @@map("projects")
   @@index([ownerId])
@@ -825,10 +827,11 @@ enum ProjectStatus {
 
 ### 8.2. Migration
 
-**ZORUNLU:** Migration'lar `prisma migrate dev` ile üretilir ve **elle düzenlenmez** (üretim migration'ı ayrı bir durum; bkz. aşağıda). Her migration açıklayıcı bir isim taşır: `add_project_status_index`, `rename_owner_to_owner_id`.
+**ZORUNLU:** Migration'lar Prisma ile üretilir (`prisma migrate dev`, etkileşimsiz ortamda `prisma migrate diff`). **Uygulanmış bir migration asla değiştirilmez**; düzeltme yeni bir migration ile yapılır. Veri dönüştüren değişikliklerde migration `--create-only` ile üretilir, SQL'i incelenir ve veri korunacak şekilde (önce ekle → veriyi taşı → sonra sil; gerekiyorsa veri varken duran koruma bloğu) uygulanmadan önce düzenlenir. Her migration açıklayıcı bir isim taşır: `add_project_status_index`, `rename_owner_to_owner_id`.
 
 - Migration dosyaları her zaman versiyon kontrolüne eklenir.
-- Production'a `prisma migrate deploy` ile uygulanır, asla `prisma db push` ile değil.
+- CI, test, staging ve production'a `prisma migrate deploy` ile uygulanır, asla `prisma db push` ile değil. Veri içeren bir veritabanında `prisma migrate reset` çalıştırılmaz.
+- Migration dosyaları LF satır sonuyla tutulur (`.gitattributes`); Prisma uygulanmış migration'ları checksum ile doğrular.
 - Yıkıcı migration'lar (kolon silme, tip daraltma) önce **backward-compatible** bir ara adımdan geçirilir (expand-contract pattern): yeni kolon eklenir → veri taşınır → eski kolon bir sonraki release'de silinir.
 
 ### 8.3. Relations
@@ -876,19 +879,24 @@ const user = await prisma.user.findUnique({ where: { id } });
 
 `include` yalnızca gerçekten ilişkili veri gerektiğinde kullanılır; derin (3+ seviye) nested include yerine ayrı sorgular veya DataLoader pattern'i değerlendirilir.
 
-### 8.7. Soft Delete
+### 8.7. Silme Politikası
 
-Kullanıcı tarafından tetiklenen silme işlemleri, veri kaybını önlemek ve denetim (audit) gereksinimleri için **soft delete** ile uygulanır (`deletedAt: DateTime?`). Gerçek (hard) delete yalnızca GDPR/KVKK "unutulma hakkı" talepleri gibi yasal zorunluluklarda, ayrı ve loglanan bir prosedürle yapılır.
+Genel bir `deletedAt` soft-delete katmanı **kullanılmaz**. Bunun yerine:
+
+- **Kullanıcı hesabı silinmez**, `User.active = false` ile pasifleştirilir. Pasif hesap giriş yapamaz ve mevcut oturumu yazma yetkisini kaybeder.
+- İçerikten kullanıcıya giden ilişkiler (`Profile`, `Post`, `Comment` → `User`) **`onDelete: Restrict`** kullanır; içeriği olan bir kullanıcı veritabanı düzeyinde silinemez. Yalnızca auth verisi (`Session`, `Account`) kullanıcıyla birlikte silinir.
+- Yazılar silmek yerine `status = ARCHIVED` ile yayından kaldırılabilir. Fiziksel silme bilinçli bir kullanıcı eylemidir (onay ister) ve sahiplik kontrolünden geçer.
+- Opsiyonel taksonomi silindiğinde içerik korunur (`Post.category` → `SetNull`).
 
 ```typescript
-// Soft delete
-await prisma.project.update({ where: { id }, data: { deletedAt: new Date() } });
+// ✅ Hesabı pasifleştir — içerik yerinde kalır
+await prisma.user.update({ where: { id }, data: { active: false } });
 
-// Tüm sorgular varsayılan olarak deletedAt: null filtresi taşır
-await prisma.project.findMany({ where: { deletedAt: null } });
+// ✅ Yazıyı yayından kaldır
+await prisma.post.update({ where: { id, authorId }, data: { status: "ARCHIVED" } });
 ```
 
-**Not:** Soft-delete filtresini her sorguda elle tekrarlamamak için Prisma Client Extension (`$extends`) ile global bir middleware katmanı tanımlanması önerilir.
+Public sorgular yayın koşulunu (`status = PUBLISHED` ve `publishedAt <= now()`) tek bir ortak filtreden alır.
 
 ### 8.8. Audit Fields
 
@@ -903,7 +911,7 @@ async function main() {
   await prisma.user.upsert({
     where: { email: "admin@example.com" },
     update: {},
-    create: { email: "admin@example.com", name: "Admin", role: "ADMIN" },
+    create: { email: "yazar@example.com", name: "Örnek Yazar" },
   });
 }
 ```
@@ -998,12 +1006,12 @@ Bu iki mesaj **asla karıştırılmaz** — kullanıcıya Prisma hata mesajı, S
 
 ### 11.1. Authentication
 
-Kimlik doğrulama **Auth.js v5** ile merkezi olarak yönetilir. Session kontrolü, korumalı her Server Action ve her Server Component'in **kendi içinde** yapılır (yalnızca middleware'e güvenilmez — defense in depth).
+Kimlik doğrulama **Better Auth** ile merkezi olarak yönetilir ([ADR 0001](adr/0001-auth-better-auth.md)): GitHub OAuth, değişmeyen GitHub kullanıcı kimliğine göre iki hesaplık izin listesi, veritabanı oturumu. Açık kayıt ve parola yoktur. Session kontrolü, korumalı her Server Action ve her Server Component'in **kendi içinde** yapılır (yalnızca proxy/layout'a güvenilmez — defense in depth). Kontrol, `User.active` değerini veritabanından okur.
 
 ```typescript
 export async function updateProjectAction(id: string, input: UpdateProjectInput) {
-  const session = await auth();
-  if (!session?.user) {
+  const author = await requireAuthor(); // oturum + User.active kontrolü
+  if (!author) {
     return { success: false as const, error: { code: "UNAUTHORIZED", message: "Giriş yapmalısınız." } };
   }
   // ...
@@ -1081,7 +1089,7 @@ export const env = envSchema.parse(process.env);
 
 ### 11.9. Cookies
 
-Session/auth cookie'leri `httpOnly`, `secure` (production'da) ve `sameSite: "lax"` (veya gereksinime göre `strict`) olarak ayarlanır; Auth.js v5'in varsayılan cookie konfigürasyonu bu ilkeleri zaten uygular ve elle zayıflatılmaz.
+Session/auth cookie'leri `httpOnly`, `secure` (production'da) ve `sameSite: "lax"` (veya gereksinime göre `strict`) olarak ayarlanır; Better Auth'un varsayılan cookie konfigürasyonu bu ilkeleri zaten uygular ve elle zayıflatılmaz.
 
 ### 11.10. HTTP Headers
 
@@ -1212,10 +1220,12 @@ Bkz. Bölüm 1.2 (S). Her dosya, her fonksiyon, her component tek bir net amaca 
 
 ### 14.1. Branch Strategy
 
-**Trunk-based / GitHub Flow** kullanılır:
+**`develop` tabanlı** akış kullanılır:
 
-- `main` — her zaman deploy edilebilir durumda, korumalı (protected) branch.
-- Özellik/düzeltme dalları `main`'den açılır: `feature/{ticket-id}-kisa-aciklama`, `fix/{ticket-id}-kisa-aciklama`, `chore/...`, `refactor/...`.
+- `main` — yayın dalı; korumalı, doğrudan commit yapılmaz. `develop` → `main` birleşmesi ayrı bir yayın kararıdır.
+- `develop` — entegrasyon dalı. Tüm çalışma dalları buradan açılır ve PR ile buraya birleştirilir.
+- Dal adları: `feat/kisa-aciklama`, `fix/...`, `chore/...`, `docs/...`, `test/...`, `refactor/...`.
+- Force push ve paylaşılan dalların geçmişini yeniden yazmak yasaktır.
 - Dallar mümkün olduğunca kısa ömürlü tutulur (birkaç gün içinde merge edilir); uzun yaşayan dallar merge conflict riskini ve review yükünü artırır.
 
 ### 14.2. Commit Convention
@@ -1251,7 +1261,7 @@ fix(auth): oturum süresi dolduğunda yanlış redirect düzeltildi
 
 - Her PR, tek bir mantıksal değişikliği kapsar (bir feature, bir fix); alakasız değişiklikler aynı PR'da birleştirilmez.
 - PR açıklaması şunları içerir: **ne değişti**, **neden değişti**, **nasıl test edildi**, varsa **ekran görüntüsü** (UI değişikliğinde zorunlu).
-- PR, CI kontrollerinden (lint, type-check, test) geçmeden merge edilmez.
+- PR, CI kontrollerinden (lint, format, type-check, birim ve entegrasyon testleri, migration, build — bkz. `.github/workflows/ci.yml`) geçmeden merge edilmez.
 
 ### 14.4. Code Review
 
@@ -1269,12 +1279,12 @@ Proje [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`) kullanır
 
 ### 15.1. Unit Test
 
-Saf iş mantığı (service katmanı, utility fonksiyonlar, Zod şemaları) unit test ile kapsanır. Repository/DB katmanı mock'lanır; test yalnızca test edilen birimin mantığına odaklanır.
+Saf iş mantığı (service katmanı, utility fonksiyonlar, Zod şemaları) **Vitest** ile unit test edilir (`npm test`). Repository/DB katmanı mock'lanır; test yalnızca test edilen birimin mantığına odaklanır. Hiçbir şeyi doğrulamayan, yalnızca başarılı görünen test script'i eklenmez.
 
 ```typescript
 describe("createProject", () => {
   it("throws BusinessRuleViolationError when active project limit is reached", async () => {
-    const repo = { countActiveByUser: jest.fn().mockResolvedValue(3), create: jest.fn() };
+    const repo = { countActiveByUser: vi.fn().mockResolvedValue(3), create: vi.fn() };
     await expect(createProject(input, userId, repo)).rejects.toThrow(BusinessRuleViolationError);
   });
 });
@@ -1282,7 +1292,7 @@ describe("createProject", () => {
 
 ### 15.2. Integration Test
 
-Server Action'lar ve API route handler'ları, gerçek (test) bir veritabanına karşı integration test ile doğrulanır; DB tamamen mock'lanmaz (mock/prod davranış farkı riskini önlemek için — bkz. Bölüm 8).
+Server Action'lar, route handler'lar ve veritabanı kısıtlarıyla uygulanan kurallar, gerçek (test) bir PostgreSQL'e karşı integration test ile doğrulanır (`tests/integration/`, `npm run test:integration`); DB tamamen mock'lanmaz. Test veritabanı izoledir: adı `_test` ile biter, migration'lar `prisma migrate deploy` ile uygulanır, testler kendi verisini temizler. Geliştirme veya production veritabanına karşı entegrasyon testi çalıştırılmaz.
 
 ### 15.3. E2E Test
 

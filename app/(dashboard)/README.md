@@ -1,8 +1,9 @@
 # (dashboard) route group
 
-Giriş yapmış kullanıcıya özel sayfalar (blog yönetimi, profil, admin paneli) bu route group
-altında yaşayacak. Bu grubun layout'u, oturum kontrolü yapan ve ortak bir dashboard kabuğu
-(sidebar/topbar) sağlayan bir `layout.tsx` içerecek.
+Yazar paneli bu route group altında olacak: `/panel`. Her yazar yalnızca kendi profilini,
+projelerini ve yazılarını yönetir.
 
-> **Bu sprint kapsamında değildir.** Blog CRUD ve admin ekranları ayrı sprintlerde eklenecektir.
-> Bu klasör şimdilik yalnızca mimarideki yerini işaretlemek için oluşturulmuştur.
+Yetki kontrolü layout'ta değil, her Server Action'ın ve servis sorgusunun içinde yapılır;
+layout'taki oturum kontrolü yalnızca yönlendirme içindir.
+
+> Aşama 3'te uygulanacak; şu an yalnızca yer tutucudur.

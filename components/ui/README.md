@@ -1,21 +1,15 @@
 # components/ui/
 
-shadcn/ui CLI'nin ürettiği ham primitive component'ler bu klasöre yazılır:
+shadcn **base-nova** stili (`@base-ui/react` primitive'leri) ile üretilen bileşenler:
+avatar, button, card, dialog, dropdown-menu, input. Yapılandırma: [`components.json`](../../components.json).
 
 ```bash
-npx shadcn@latest add button
-npx shadcn@latest add card dialog form
+npx shadcn@4.13.1 add <bileşen>
 ```
 
 ## Kurallar
 
-- Bu klasördeki dosyalar **elle düzenlenmez.** Bir primitive'in davranışını değiştirmek
-  gerekiyorsa, onu sarmalayan (compose eden) yeni bir component `shared/components/` altında
-  oluşturulur — ham primitive olduğu gibi kalır. Bu, ileride `npx shadcn add` ile
-  güncelleme/yeniden üretim yapıldığında özel değişikliklerin ezilmesini önler.
-- Stil/tema değişiklikleri buradaki component'lerin içinde değil, `app/globals.css`
-  içindeki CSS custom property'lerinde yapılır (bkz. proje kuralları §17.3).
-
-> Bu sprint kapsamında henüz hiçbir shadcn component'i eklenmemiştir (`npx shadcn init`
-> konfigürasyonu [`components.json`](../../components.json) içinde hazır, ilk `add` komutu
-> ilgili UI ihtiyacı doğduğunda çalıştırılacaktır).
+- Bu klasördeki dosyalar **elle düzenlenmez** ve Prettier kapsamı dışındadır. Davranış
+  değişikliği gerekiyorsa bileşeni saran yeni bir bileşen `shared/components/` altında yazılır.
+- Tema değişiklikleri `app/globals.css` içindeki CSS değişkenlerinde yapılır.
+- Radix tabanlı `new-york` stili kullanılmaz; yeni bileşenler base-nova ile eklenir.

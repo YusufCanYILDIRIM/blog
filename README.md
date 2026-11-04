@@ -1,193 +1,103 @@
-# 📝 Modern Blog Platform
+# Portfolyo ve Blog
 
-<p align="center">
-  <strong>Next.js 15 App Router üzerine kurulu, modern, ölçeklenebilir ve production-ready monolitik blog platformu.</strong>
-</p>
+İki geliştiricinin kişisel portfolyolarını, projelerini ve blog yazılarını tek sitede sunan
+**Next.js 16** uygulaması. İçerik, iki yazarın GitHub hesabıyla girdiği bir panelden yönetilecek.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Next.js-15-black?logo=next.js" />
-  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react" />
-  <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript" />
-  <img src="https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?logo=tailwindcss" />
-  <img src="https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma" />
-  <img src="https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql" />
-  <img src="https://img.shields.io/badge/License-MIT-green" />
-</p>
+> **Durum:** Aşama 1 — monolit temel. Çalışan sayfalar, giriş akışı ve panel **henüz yok**.
+> Ayrıntılar için [Yol haritası](#yol-haritası).
 
----
-
-## 📖 Genel Bakış
-
-Modern Blog Platform, **monolitik bir Next.js 15 App Router uygulaması** olarak tasarlanmıştır.
-Sunucu bileşenleri (Server Components) ve Server Actions ile veri erişimi, iş mantığı ve UI aynı
-uygulama içinde, katmanlar arası net bir sorumluluk ayrımıyla yönetilir — ayrı bir Express.js API
-katmanına ihtiyaç duyulmaz.
-
-> Bu mimari daha önce ayrık (decoupled) bir Next.js + Express.js yapısı olarak planlanmıştı.
-> Sprint 2.1 ile birlikte, Auth.js v5 ve Server Actions'ın sunduğu doğrudan entegrasyon
-> avantajları nedeniyle **monolitik Next.js mimarisine** geçilmiştir. Ayrıntılı gerekçe ve
-> tüm geliştirme standartları için bkz. [docs/project-rules.md](docs/project-rules.md).
-
----
-
-## 🏗 Mimari
+## Mimari
 
 ```
-                Browser
-                   │
-                   ▼
-      Next.js 15 (App Router)
-   ┌───────────────────────────┐
-   │ Server Components / Pages │
-   │ Server Actions (mutation) │
-   │ Route Handlers (webhook)  │
-   └───────────────────────────┘
-                   │
-              Prisma ORM
-                   │
-                   ▼
-            PostgreSQL
+Tarayıcı
+   │
+   ▼
+Next.js 16 (App Router)
+   ├─ Server Components  → public sayfalar (doğrudan servis katmanını çağırır)
+   ├─ Server Actions     → panel mutasyonları
+   └─ Route Handlers     → yalnızca auth callback / dış entegrasyon
+   │
+   ▼
+Prisma 7 (@prisma/adapter-pg) → PostgreSQL
 ```
 
----
+Tek uygulama, tek veritabanı. Ayrı bir Express API, Redis veya kuyruk yok.
 
-## 📁 Proje Yapısı
+| Konu | Karar |
+|---|---|
+| Kimlik doğrulama | Better Auth + GitHub OAuth; yalnızca iki izinli hesap ([ADR 0001](docs/adr/0001-auth-better-auth.md)) |
+| Arayüz | shadcn **base-nova** + `@base-ui/react`, Tailwind CSS v4, Geist |
+| URL'ler | Türkçe: `/kisiler/[slug]`, `/projeler`, `/blog`, `/iletisim`, `/giris`, `/panel` |
+| Silme | Hesaplar pasifleştirilir; içerik zincirleme silinmez |
+
+## Teknolojiler
+
+Next.js 16.4 · React 19.3 · TypeScript 5.9 (strict) · Prisma 7.10 · PostgreSQL 16 ·
+Better Auth 1.7 · Tailwind CSS 4 · Zod · Vitest 5
+
+## Klasör yapısı
 
 ```
-blog/
-├── app/                    # Next.js App Router — yalnızca routing, layout, sayfa kompozisyonu
-│   ├── (auth)/              # Route group: login, register (planlanan)
-│   ├── (dashboard)/         # Route group: giriş gerektiren sayfalar (planlanan)
-│   ├── api/                  # Yalnızca dış entegrasyon/webhook route handler'ları
-│   ├── layout.tsx
-│   ├── page.tsx
-│   └── globals.css
-│
-├── features/                # Feature-based iş modülleri (components, actions, services, repositories, schemas, hooks, types)
-├── shared/                   # Feature-agnostic, tekrar kullanılabilir components/hooks/utils
-├── components/ui/            # shadcn/ui CLI çıktısı (elle düzenlenmez)
-│
-├── lib/                      # Altyapı: Prisma client, env validasyonu, shadcn `cn()` yardımcısı
-├── providers/                 # React context provider kompozisyonu (tema, vb.)
-├── types/                      # Proje geneli paylaşılan tip tanımları
-├── config/                     # Statik/ortam bazlı app konfigürasyonu (site metadata)
-├── constants/                  # Değişmeyen kod sabitleri (route path'leri, vb.)
-├── hooks/                       # Framework-agnostic jenerik React hook'ları
-├── utils/                        # Sıfır bağımlılıklı jenerik yardımcı fonksiyonlar
-│
-├── prisma/                        # Veritabanı şeması ve migration'lar
-├── docker/                         # Postgres/Redis local geliştirme konfigürasyonu
-├── docs/                            # Proje kuralları ve mimari dokümantasyon
-└── docker-compose.yml
+app/            Routing, layout, sayfa kompozisyonu (iş mantığı yok)
+features/       Özellik modülleri: components, actions, services, repositories, schemas
+shared/         Birden fazla feature'ın kullandığı components / hooks / utils
+components/ui/  shadcn base-nova bileşenleri (CLI çıktısı, elle düzenlenmez)
+config/         Site metadata ve public (istemciye açık) yapılandırma
+lib/            Prisma istemcisi, sunucu env doğrulaması (server-only), cn()
+prisma/         Şema, migration'lar, üretilen istemci (git'te yok)
+tests/          Entegrasyon testleri (gerçek PostgreSQL)
+docs/           Proje kuralları ve mimari kararlar (ADR)
 ```
 
-Her klasörün tam sorumluluğu ve sınırları için bkz. [docs/project-rules.md §2](docs/project-rules.md#2-klasör-yapısı-kuralları).
+## Kurulum
 
----
-
-## 🛠 Tech Stack
-
-- **Next.js 15** (App Router, Server Actions)
-- **React 19**
-- **TypeScript** (strict mode)
-- **Tailwind CSS v4**
-- **shadcn/ui**
-- **Prisma ORM** + **PostgreSQL**
-- **Auth.js v5** *(planlanan — bkz. yol haritası)*
-- **Zod** (paylaşılan frontend/backend validasyonu)
-- **React Hook Form**
-
----
-
-## 🔒 Güvenlik
-
-Uygulanacak güvenlik standartları (authentication sprintinde devreye girecek) için bkz.
-[docs/project-rules.md §11](docs/project-rules.md#11-güvenlik-kuralları): Auth.js tabanlı
-authentication, RBAC, Zod input validation, XSS/CSRF/SQL Injection koruması, rate limiting,
-güvenli cookie/env/secret yönetimi.
-
----
-
-## ⚙️ Başlarken
-
-### Gereksinimler
-
-- Node.js 22+
-- Docker (PostgreSQL için)
-
-### Kurulum
+Gereksinimler: Node.js 22.12+ (`.nvmrc`), Docker.
 
 ```bash
-git clone <repo-url>
-cd blog
-
-npm install
-
-cp .env.example .env
-# .env dosyasındaki DATABASE_URL ve NEXT_PUBLIC_APP_URL değerlerini kontrol edin
-
-docker compose up -d     # PostgreSQL ve Redis'i ayağa kaldırır
-
-npm run dev
+npm ci                      # bağımlılıklar + prisma generate (postinstall)
+cp .env.example .env        # değerleri gözden geçirin
+docker compose up -d        # PostgreSQL (yalnızca 127.0.0.1)
+npm run prisma:deploy       # migration'ları uygular
+npm run dev                 # http://localhost:3000
 ```
 
-Uygulama [http://localhost:3000](http://localhost:3000) adresinde çalışır.
+Redis varsayılan olarak başlatılmaz; ihtiyaç olursa `docker compose --profile redis up -d`.
 
-### Kullanılabilir Script'ler
+## Komutlar
 
 | Komut | Açıklama |
 |---|---|
-| `npm run dev` | Geliştirme sunucusunu başlatır |
-| `npm run build` | Production build alır |
-| `npm run start` | Production build'i çalıştırır |
-| `npm run lint` | ESLint kontrolü |
-| `npm run format` | Prettier ile formatlar |
-| `npm run typecheck` | TypeScript tip kontrolü (`tsc --noEmit`) |
-| `npm run prisma:generate` | Prisma Client üretir |
-| `npm run prisma:migrate` | Migration oluşturur ve uygular (dev) |
-| `npm run prisma:studio` | Prisma Studio'yu açar |
+| `npm run dev` / `build` / `start` | Geliştirme sunucusu / production build / çalıştırma |
+| `npm run lint` | ESLint |
+| `npm run format:check` / `format` | Prettier kontrolü / düzeltme |
+| `npm run typecheck` | `next typegen` + `tsc --noEmit` |
+| `npm test` | Birim testleri (Vitest) |
+| `npm run test:integration` | Gerçek PostgreSQL'e karşı testler. `TEST_DATABASE_URL` gerekir; veritabanı adı `_test` ile bitmeli, testler tabloları temizler |
+| `npm run prisma:migrate` | Yeni migration üretir (yalnızca geliştirme DB'si) |
+| `npm run prisma:deploy` | Commit edilmiş migration'ları uygular |
 
----
+## Git akışı
 
-## 🗺 Yol Haritası
+- `main`: yayın dalı. Doğrudan commit yapılmaz.
+- `develop`: entegrasyon dalı. Tüm çalışma dalları buradan açılır ve PR ile buraya döner.
+- Dal adları: `feat/...`, `fix/...`, `chore/...`, `docs/...`, `test/...`.
+- PR'lar CI (lint, format, typecheck, birim + entegrasyon testleri, migration, build) geçmeden birleştirilmez.
+- Commit'ler [Conventional Commits](https://www.conventionalcommits.org/) biçimindedir.
 
-- [x] Proje planlaması
-- [x] Proje iskeleti (Sprint 2.1 — Foundation)
-- [ ] Veritabanı modelleme (Post, User, Comment, Category, Tag)
-- [ ] Authentication (Auth.js v5)
-- [ ] Blog CRUD
-- [ ] Zengin metin editörü
-- [ ] Görsel yükleme
-- [ ] İç içe yorumlar
-- [ ] Beğeniler ve bildirimler
-- [ ] Kategoriler ve arama
-- [ ] Admin paneli
-- [ ] Test kapsamı
-- [ ] CI/CD
+## Yol haritası
 
----
+- [x] **Aşama 1** — Monolit temel: Next.js 16 + Prisma 7, base-nova tasarım sistemi, auth kararı, veri modeli, env ayrımı, test altyapısı, CI
+- [ ] **Aşama 2** — Public portfolyo ve blog sayfaları (örnek veriyle), `Project` modeli
+- [ ] **Aşama 3** — GitHub ile giriş (iki hesap), `/panel`, Markdown editör, görsel yükleme
+- [ ] **Aşama 4** — SEO (metadata, sitemap, RSS), güvenlik ve uçtan uca testler
+- [ ] **Aşama 5** — Staging, yedek/geri yükleme, `develop` birleşmeleri
 
-## 📚 Dokümantasyon
+## Belgeler
 
-- [docs/project-rules.md](docs/project-rules.md) — Bağlayıcı geliştirme standartları (mimari,
-  naming convention, TypeScript/React/Next.js kuralları, güvenlik, test, Definition of
-  Ready/Done ve daha fazlası)
+- [docs/project-rules.md](docs/project-rules.md) — bağlayıcı geliştirme kuralları
+- [docs/adr/](docs/adr/) — mimari kararlar
 
----
+## Lisans
 
-## 🤝 Katkıda Bulunma
-
-1. Depoyu fork'layın
-2. Bir feature dalı oluşturun: `git checkout -b feature/kisa-aciklama`
-3. Değişikliklerinizi commit'leyin: `git commit -m "feat: yeni özellik eklendi"`
-4. Dalınızı push'layın: `git push origin feature/kisa-aciklama`
-5. Pull Request açın
-
-Her PR, [docs/project-rules.md §14](docs/project-rules.md#14-git-kuralları) standartlarına
-uygun olmalıdır.
-
----
-
-## 📄 Lisans
-
-Bu proje MIT Lisansı ile lisanslanmıştır.
+Henüz belirlenmedi. `LICENSE` dosyası boş; lisans türü ve hak sahipleri proje sahiplerince
+kararlaştırılacak.
