@@ -5,11 +5,13 @@ node_modules/
 dist/
 build/
 .next/
+next-env.d.ts
+*.tsbuildinfo
 
-# env
+# env — tüm .env varyantları; yalnızca örnek dosya izlenir
 .env
-.env.local
-.env.production
+.env*
+!.env.example
 
 # logs
 logs/
@@ -17,10 +19,14 @@ logs/
 npm-debug.log*
 
 # prisma
-backend/prisma/dev.db
+prisma/dev.db
+prisma/generated/
 
 # vscode
 .vscode/
+
+# claude code local settings
+.claude/
 
 # mac
 .DS_Store

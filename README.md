@@ -1,321 +1,104 @@
-# 📝 Modern Blog Platform
+# Portfolyo ve Blog
 
-<p align="center">
-  <strong>A modern, scalable, and production-ready blog platform built with Next.js, Express.js, Prisma, and PostgreSQL.</strong>
-</p>
+İki geliştiricinin kişisel portfolyolarını, projelerini ve blog yazılarını tek sitede sunan
+**Next.js 16** uygulaması. İçerik, iki yazarın GitHub hesabıyla girdiği bir panelden yönetilecek.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Next.js-15-black?logo=next.js" />
-  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react" />
-  <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript" />
-  <img src="https://img.shields.io/badge/Express.js-Backend-000000?logo=express" />
-  <img src="https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma" />
-  <img src="https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql" />
-  <img src="https://img.shields.io/badge/License-MIT-green" />
-</p>
+> **Durum:** Aşama 1 — monolit temel. Çalışan sayfalar, giriş akışı ve panel **henüz yok**.
+> Ayrıntılar için [Yol haritası](#yol-haritası).
 
----
-
-# 📖 Overview
-
-Modern Blog Platform is a full-stack blogging application designed with scalability, maintainability, and security in mind.
-
-The application follows a **decoupled architecture**, where the frontend and backend are developed independently and deployed to separate servers.
-
-This architecture makes the project suitable for:
-
-- Production deployments
-- Mobile applications
-- Future microservices
-- Independent scaling
-- CI/CD pipelines
-
----
-
-# ✨ Features
-
-## Authentication
-
-- User Registration
-- User Login
-- Secure Logout
-- JWT Authentication
-- Refresh Tokens
-- Email Verification
-- Forgot Password
-- Password Reset
-
----
-
-## Blog
-
-- Create Posts
-- Edit Posts
-- Delete Posts
-- Draft Support
-- Publish/Unpublish
-- Rich Text Editor
-- Image Upload
-
----
-
-## Community
-
-- Nested Comments
-- Reply to Comments
-- Like Posts
-- User Profiles
-- Notifications
-
----
-
-## Search
-
-- Full Text Search
-- Categories
-- Tags
-- Filtering
-- Pagination
-
----
-
-## Administration
-
-- Admin Dashboard
-- User Management
-- Comment Moderation
-- Category Management
-- Statistics
-
----
-
-# 🏗 Architecture
+## Mimari
 
 ```
-                Browser
-                   │
-                   ▼
-        Frontend (Next.js)
-                   │
-          REST API Requests
-                   │
-                   ▼
-      Backend (Express.js API)
-                   │
-          Prisma ORM
-                   │
-                   ▼
-            PostgreSQL
+Tarayıcı
+   │
+   ▼
+Next.js 16 (App Router)
+   ├─ Server Components  → public sayfalar (doğrudan servis katmanını çağırır)
+   ├─ Server Actions     → panel mutasyonları
+   └─ Route Handlers     → yalnızca auth callback / dış entegrasyon
+   │
+   ▼
+Prisma 7 (@prisma/adapter-pg) → PostgreSQL
 ```
 
----
+Tek uygulama, tek veritabanı. Ayrı bir Express API, Redis veya kuyruk yok.
 
-# 📁 Project Structure
+| Konu | Karar |
+|---|---|
+| Kimlik doğrulama | Better Auth + GitHub OAuth; yalnızca iki izinli hesap ([ADR 0001](docs/adr/0001-auth-better-auth.md)) |
+| Arayüz | shadcn **base-nova** + `@base-ui/react`, Tailwind CSS v4, Geist |
+| URL'ler | Türkçe: `/kisiler/[slug]`, `/projeler`, `/blog`, `/iletisim`, `/giris`, `/panel` |
+| Silme | Hesaplar pasifleştirilir; içerik zincirleme silinmez |
+
+## Teknolojiler
+
+Next.js 16.4 · React 19.3 · TypeScript 5.9 (strict) · Prisma 7.10 · PostgreSQL 16 ·
+Better Auth 1.7 · Tailwind CSS 4 · Zod · Vitest 5
+
+## Klasör yapısı
 
 ```
-blog-platform/
-
-├── frontend/
-│   ├── src/
-│   ├── public/
-│   ├── components/
-│   ├── features/
-│   ├── hooks/
-│   ├── services/
-│   ├── lib/
-│   ├── types/
-│   └── package.json
-│
-├── backend/
-│   ├── src/
-│   │   ├── controllers/
-│   │   ├── routes/
-│   │   ├── middlewares/
-│   │   ├── services/
-│   │   ├── repositories/
-│   │   ├── validators/
-│   │   ├── config/
-│   │   ├── utils/
-│   │   └── types/
-│   │
-│   ├── prisma/
-│   └── package.json
-│
-├── docs/
-│
-├── docker-compose.yml
-│
-└── README.md
+app/            Routing, layout, sayfa kompozisyonu (iş mantığı yok)
+features/       Özellik modülleri: components, actions, services, repositories, schemas
+shared/         Birden fazla feature'ın kullandığı components / hooks / utils
+components/ui/  shadcn base-nova bileşenleri (CLI çıktısı, elle düzenlenmez)
+config/         Site metadata ve public (istemciye açık) yapılandırma
+lib/            Prisma istemcisi, sunucu env doğrulaması (server-only), cn()
+prisma/         Şema, migration'lar, üretilen istemci (git'te yok)
+tests/          Entegrasyon testleri (gerçek PostgreSQL)
+docs/           Proje kuralları ve mimari kararlar (ADR)
 ```
 
----
+## Kurulum
 
-# 🛠 Tech Stack
-
-## Frontend
-
-- Next.js 15
-- React 19
-- TypeScript
-- Tailwind CSS
-- shadcn/ui
-- React Hook Form
-- Zod
-- TanStack Query
-- Zustand
-- Axios
-
----
-
-## Backend
-
-- Node.js
-- Express.js
-- TypeScript
-- Prisma ORM
-- PostgreSQL
-- Redis
-- JWT Authentication
-- Cloudinary
-- Resend
-- Helmet
-- CORS
-- Multer
-- Winston/Pino
-
----
-
-# 🔒 Security
-
-- JWT Authentication
-- Refresh Tokens
-- HttpOnly Cookies
-- Rate Limiting
-- Password Hashing (bcrypt)
-- Input Validation
-- CSRF Protection
-- XSS Protection
-- SQL Injection Protection (Prisma)
-- Helmet Security Headers
-
----
-
-# 🚀 Deployment
-
-| Service | Platform |
-|----------|----------|
-| Frontend | Vercel / Cloudflare Pages |
-| Backend | Railway / Render / VPS |
-| Database | PostgreSQL (Neon / Supabase) |
-| Redis | Upstash |
-| Storage | Cloudinary |
-
----
-
-# ⚙️ Getting Started
-
-## Clone Repository
+Gereksinimler: Node.js 22.12+ (`.nvmrc`), Docker.
 
 ```bash
-git clone https://github.com/your-username/blog-platform.git
+npm ci                      # bağımlılıklar + prisma generate (postinstall)
+cp .env.example .env        # değerleri gözden geçirin
+docker compose up -d        # PostgreSQL (yalnızca 127.0.0.1)
+npm run prisma:deploy       # migration'ları uygular
+npm run dev                 # http://localhost:3000
 ```
 
----
+Redis varsayılan olarak başlatılmaz; ihtiyaç olursa `docker compose --profile redis up -d`.
 
-## Frontend
+## Komutlar
 
-```bash
-cd frontend
+| Komut | Açıklama |
+|---|---|
+| `npm run dev` / `build` / `start` | Geliştirme sunucusu / production build / çalıştırma |
+| `npm run lint` | ESLint |
+| `npm run format:check` / `format` | Prettier kontrolü / düzeltme |
+| `npm run typecheck` | `next typegen` + `tsc --noEmit` |
+| `npm test` | Birim testleri (Vitest) |
+| `npm run test:integration` | Gerçek PostgreSQL'e karşı testler. `TEST_DATABASE_URL` gerekir; veritabanı adı `_test` ile bitmeli, testler tabloları temizler |
+| `npm run prisma:migrate` | Yeni migration üretir (yalnızca geliştirme DB'si) |
+| `npm run prisma:deploy` | Commit edilmiş migration'ları uygular |
+| `npm run prisma:recover-bio-guard` | `users.bio` korumasında durmuş bir veritabanını, koşullar doğrulanırsa kurtarır ([ayrıntı](prisma/README.md#usersbio--profilesbio-geçişi-ve-kurtarma)) |
 
-npm install
+## Git akışı
 
-npm run dev
-```
+- `main`: yayın dalı. Doğrudan commit yapılmaz.
+- `develop`: entegrasyon dalı. Tüm çalışma dalları buradan açılır ve PR ile buraya döner.
+- Dal adları: `feat/...`, `fix/...`, `chore/...`, `docs/...`, `test/...`.
+- PR'lar CI (lint, format, typecheck, birim + entegrasyon testleri, migration, build) geçmeden birleştirilmez.
+- Commit'ler [Conventional Commits](https://www.conventionalcommits.org/) biçimindedir.
 
----
+## Yol haritası
 
-## Backend
+- [x] **Aşama 1** — Monolit temel: Next.js 16 + Prisma 7, base-nova tasarım sistemi, auth kararı, veri modeli, env ayrımı, test altyapısı, CI
+- [ ] **Aşama 2** — Public portfolyo ve blog sayfaları (örnek veriyle), `Project` modeli
+- [ ] **Aşama 3** — GitHub ile giriş (iki hesap), `/panel`, Markdown editör, görsel yükleme
+- [ ] **Aşama 4** — SEO (metadata, sitemap, RSS), güvenlik ve uçtan uca testler
+- [ ] **Aşama 5** — Staging, yedek/geri yükleme, `develop` birleşmeleri
 
-```bash
-cd backend
+## Belgeler
 
-npm install
+- [docs/project-rules.md](docs/project-rules.md) — bağlayıcı geliştirme kuralları
+- [docs/adr/](docs/adr/) — mimari kararlar
 
-npx prisma migrate dev
+## Lisans
 
-npm run dev
-```
-
----
-
-# 🗺 Roadmap
-
-- [x] Project Planning
-- [ ] Authentication
-- [ ] User Profiles
-- [ ] Blog CRUD
-- [ ] Rich Text Editor
-- [ ] Image Upload
-- [ ] Nested Comments
-- [ ] Likes
-- [ ] Notifications
-- [ ] Categories
-- [ ] Search
-- [ ] Admin Dashboard
-- [ ] Monitoring
-- [ ] Docker
-- [ ] CI/CD
-- [ ] Testing
-
----
-
-# 📚 Documentation
-
-Documentation will be available inside the **docs/** directory.
-
-- Architecture
-- API Documentation
-- Database Design
-- Deployment Guide
-- Security Guide
-
----
-
-# 🤝 Contributing
-
-Contributions are welcome!
-
-1. Fork the repository
-2. Create a feature branch
-
-```bash
-git checkout -b feature/new-feature
-```
-
-3. Commit your changes
-
-```bash
-git commit -m "feat: add new feature"
-```
-
-4. Push your branch
-
-```bash
-git push origin feature/new-feature
-```
-
-5. Open a Pull Request
-
----
-
-# 📄 License
-
-This project is licensed under the MIT License.
-
----
-
-# ⭐ Support
-
-If you find this project helpful, consider giving it a ⭐ on GitHub.
-
-It helps others discover the project and motivates further development.
+Henüz belirlenmedi. `LICENSE` dosyası boş; lisans türü ve hak sahipleri proje sahiplerince
+kararlaştırılacak.

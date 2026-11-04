@@ -1,0 +1,8 @@
+node_modules
+.next
+prisma/generated
+# shadcn CLI çıktısı — elle/formatter ile düzenlenmez
+components/ui/*.tsx
+coverage
+*.md
+package-lock.json

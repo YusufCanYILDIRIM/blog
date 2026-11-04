@@ -1,0 +1,11 @@
+# Depoda tüm metin dosyaları LF ile tutulur.
+* text=auto eol=lf
+
+# Prisma, uygulanmış migration'ları dosya checksum'ıyla doğrular. Windows'ta
+# CRLF'ye çevrilen bir migration "değiştirilmiş" görünür; bu yüzden LF sabittir.
+*.sql text eol=lf
+
+*.ico binary
+*.png binary
+*.jpg binary
+*.woff2 binary
