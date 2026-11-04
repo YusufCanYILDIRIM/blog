@@ -21,7 +21,8 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "test": "vitest run",
-    "test:integration": "vitest run --config vitest.integration.config.mts"
+    "test:integration": "vitest run --config vitest.integration.config.mts",
+    "prisma:recover-bio-guard": "node scripts/recover-bio-guard.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.6.0",
