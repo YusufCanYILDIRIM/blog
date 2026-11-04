@@ -8,10 +8,10 @@ build/
 next-env.d.ts
 *.tsbuildinfo
 
-# env
+# env — tüm .env varyantları; yalnızca örnek dosya izlenir
 .env
-.env.local
-.env.production
+.env*
+!.env.example
 
 # logs
 logs/

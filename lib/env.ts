@@ -1,17 +1,15 @@
-import { z } from "zod";
+import "server-only";
+
+import { parseServerEnv } from "@/lib/env.schema";
 
 /**
- * Ortam değişkenleri, uygulama başlarken burada doğrulanır. Eksik/hatalı bir
- * değişken, uygulamayı build/start aşamasında durdurur — runtime'da sessiz
- * hata vermez (bkz. proje kuralları §11.8).
+ * Doğrulanmış sunucu ortam değişkenleri. Yalnızca sunucuda import edilebilir;
+ * bir Client Component bu modülü içeri alırsa build hata verir. Eksik veya
+ * hatalı değişken, modül ilk yüklendiğinde değer sızdırmayan bir hatayla
+ * uygulamayı durdurur.
  *
- * NOT: Yalnızca bu sprintte gerçekten kullanılan değişkenler doğrulanır.
- * Auth.js, Cloudinary, Resend gibi entegrasyonlara ait değişkenler, o
- * entegrasyonlar yazılırken bu şemaya eklenecektir.
+ * İstemcinin görebileceği değerler için `config/public-env.ts` kullanılır.
+ * Yeni bir entegrasyon (Better Auth, medya deposu) bağlandığında değişkenleri
+ * `lib/env.schema.ts` içindeki şemaya eklenir.
  */
-const envSchema = z.object({
-  DATABASE_URL: z.string().url(),
-  NEXT_PUBLIC_APP_URL: z.string().url(),
-});
-
-export const env = envSchema.parse(process.env);
+export const env = parseServerEnv(process.env);

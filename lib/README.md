@@ -1,14 +1,13 @@
 # lib/
 
-Altyapısal singleton'lar ve 3. parti entegrasyon konfigürasyonları. Bu klasördeki dosyalar
-iş mantığı içermez; yalnızca bir kütüphaneyi/servisi uygulamanın geri kalanına kullanıma
-hazır şekilde sunar.
+Altyapısal singleton'lar ve 3. parti entegrasyon kurulumu. İş mantığı içermez.
 
-| Dosya | Amaç |
-|---|---|
-| `prisma.ts` | `PrismaClient` singleton'ı (hot-reload'da bağlantı sızıntısını önler) |
-| `env.ts` | Zod ile doğrulanmış, tip güvenli ortam değişkenleri |
-| `utils.ts` | shadcn/ui'nin `cn()` class-merge yardımcısı (sabit konvansiyon, taşınmaz) |
+| Dosya | Amaç | Sınır |
+|---|---|---|
+| `prisma.ts` | Prisma 7 istemcisi (`@prisma/adapter-pg`), hot-reload'a karşı singleton | `server-only` |
+| `env.ts` | Doğrulanmış sunucu ortam değişkenleri | `server-only` |
+| `env.schema.ts` | Env şemaları ve saf doğrulama fonksiyonları (değer okumaz, test edilebilir) | — |
+| `utils.ts` | shadcn `cn()` yardımcısı | — |
 
-> `auth.ts` (Auth.js v5 konfigürasyonu) bu sprint kapsamında **eklenmemiştir**; ayrı bir
-> authentication sprintinde bu klasöre eklenecektir.
+İstemcinin görebileceği yapılandırma `config/public-env.ts` içindedir. Better Auth
+yapılandırması (`auth.ts`) Aşama 3'te eklenecek.
