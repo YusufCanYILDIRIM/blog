@@ -1,7 +1,13 @@
-// Sprint 2.2 — Database Design
-// Blog platformu için üretim seviyesinde çekirdek modeller: User, Post, Comment,
-// Category, Tag ve Post<->Tag ilişkisini kuran açık (explicit) join modeli PostTag.
-// Soft delete kullanılmıyor (proje kararı) — silme işlemleri kalıcıdır (hard delete).
+// İki kişilik portfolyo + blog — veri modeli.
+//
+// Temel kurallar (bkz. docs/adr/0001-auth-better-auth.md ve docs/project-rules.md):
+// - Kullanıcı hesabı silinmez, `active = false` ile pasifleştirilir. İçerik
+//   ilişkileri (Profile, Post, Comment) `onDelete: Restrict` kullanır; bir
+//   kullanıcı yanlışlıkla silinse bile yazıları zincirleme silinmez.
+// - Yalnızca auth verisi (Session, Account) kullanıcıyla birlikte silinir.
+// - Public görünürlük: `status = PUBLISHED` ve `publishedAt <= now()`.
+// - Sütun adları mevcut init migration ile uyumlu olarak camelCase'dir;
+//   tablo adları `@@map` ile snake_case çoğuldur.
 
 generator client {
   provider     = "prisma-client"
@@ -15,57 +21,157 @@ datasource db {
   provider = "postgresql"
 }
 
-enum UserRole {
-  USER
-  ADMIN
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 
-  @@map("user_role")
+  @@map("post_status")
 }
 
-model User {
-  id           String   @id @default(uuid()) @db.Uuid
-  email        String   @unique
-  name         String
-  passwordHash String?
-  image        String?
-  bio          String?  @db.Text
-  role         UserRole @default(USER)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+// ─────────────────────────────────────────────
+// Kimlik (Better Auth çekirdek tabloları)
+// Alanlar better-auth 1.7 `getAuthTables` tanımıyla birebir eşleşir; id'ler
+// `advanced.database.generateId: "uuid"` ile UUID üretilir.
+// ─────────────────────────────────────────────
 
+/// Giriş hesabı. Public profil bilgisi `Profile` üzerindedir; e-posta ve auth
+/// alanları public yanıtlara girmez.
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  /// false → hesap pasif: giriş reddedilir, mevcut oturum yazma yetkisini kaybeder.
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  profile  Profile?
   posts    Post[]
   comments Comment[]
+  accounts Account[]
+  sessions Session[]
 
   @@map("users")
 }
 
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+/// Sağlayıcı hesabı. GitHub için `accountId`, GitHub'ın değişmeyen sayısal
+/// kullanıcı kimliğidir; izin listesi bu değere göre uygulanır.
+model Account {
+  id                    String    @id @default(uuid()) @db.Uuid
+  accountId             String
+  providerId            String
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  /// Better Auth şemasında yer alır; yalnızca OAuth kullanıldığı için boş kalır.
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+/// OAuth state ve benzeri kısa ömürlü doğrulama kayıtları.
+model Verification {
+  id         String   @id @default(uuid()) @db.Uuid
+  identifier String
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verifications")
+}
+
+// ─────────────────────────────────────────────
+// Portfolyo
+// ─────────────────────────────────────────────
+
+/// Kişinin public portfolyo kimliği; `/kisiler/[slug]` adresini besler.
+model Profile {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique
+  displayName String
+  headline    String?
+  bio         String?  @db.Text
+  avatarUrl   String?
+  location    String?
+  websiteUrl  String?
+  githubUrl   String?
+  linkedinUrl String?
+  /// Ana sayfadaki sıralama.
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String @unique @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@map("profiles")
+}
+
+// ─────────────────────────────────────────────
+// Blog
+// ─────────────────────────────────────────────
+
 model Post {
-  id          String    @id @default(uuid()) @db.Uuid
+  id          String     @id @default(uuid()) @db.Uuid
   title       String
-  slug        String    @unique
-  excerpt     String?   @db.Text
-  content     String    @db.Text
+  slug        String     @unique
+  excerpt     String?    @db.Text
+  content     String     @db.Text
   coverImage  String?
-  published   Boolean   @default(false)
+  status      PostStatus @default(DRAFT)
   publishedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   authorId String @db.Uuid
-  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Restrict)
 
-  categoryId String   @db.Uuid
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  /// Kategori silinirse yazı silinmez, kategorisiz kalır.
+  categoryId String?   @db.Uuid
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   comments Comment[]
   tags     PostTag[]
 
-  @@index([authorId])
+  @@index([authorId, status, publishedAt])
   @@index([categoryId])
-  @@index([published, publishedAt])
+  @@index([status, publishedAt])
   @@map("posts")
 }
 
+/// v1 kapsamında kullanılmıyor (ziyaretçi hesabı/yorum yok). Tablo, mevcut
+/// veriyi korumak için kaldırılmadı; kaldırma ayrı bir karar olarak bekliyor.
 model Comment {
   id        String   @id @default(uuid()) @db.Uuid
   content   String   @db.Text
@@ -73,7 +179,7 @@ model Comment {
   updatedAt DateTime @updatedAt
 
   authorId String @db.Uuid
-  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Restrict)
 
   postId String @db.Uuid
   post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
@@ -108,10 +214,8 @@ model Tag {
   @@map("tags")
 }
 
-// Post <-> Tag çoktan-çoğa ilişkisi için açık (explicit) join modeli.
-// Prisma'nın implicit m2m'i yerine tercih edildi çünkü implicit m2m'de
-// join tablosu üzerinde onDelete davranışı elle tanımlanamıyor; burada
-// her iki FK için de Cascade açıkça belirtilebiliyor.
+/// Post <-> Tag çoktan-çoğa ilişkisi için açık (explicit) join modeli; her iki
+/// FK için onDelete davranışı açıkça tanımlanabilsin diye tercih edildi.
 model PostTag {
   id        String   @id @default(uuid()) @db.Uuid
   createdAt DateTime @default(now())
